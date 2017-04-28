@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        body{
+            background: #ddd;
+        }
+        *{
+            margin:0;
+            padding:0;
+        }
+        #container{
+            position:relative;
+            width:1000px;
+            margin:50px auto;
+        }
+        .item{
+            position: absolute;
+            border:4px solid #fff;
+           
+        }
+    </style>
+</head>
+<body>
+<div id="container">
+
+</div>
+<script src="js/jquery.min.js"></script>
+<script>
+	window.onload=function(){
+		$(window).trigger('resize');
+		
+	}
+//    网站性能优化方法：
+//    1.减少文件的大小；
+//    2.减少向服务器请求的次数。
+
+//通过接口请求数据
+var url='http://route.showapi.com/197-1?showapi_appid=3&showapi_sign=9FD45B179FD8B8026AD74B5D14EA1CE8&num=50&rand=0';                      
+var page=1;//请求数据的分页
+var arrLeft=[];//存储定位left值
+var arrTop=[];//存储定位的top值
+var cells=4;//具体的列数
+var width=200; //每个图片的宽度
+var space=16; //每列之间的间隙
+var outerWidth=width+space;
+//第一排图片的位置
+for(var i=0;i<cells;i++){
+    arrTop.push(0); //第一排的top都为0
+    arrLeft.push(i*outerWidth);
+}
+//找到数组中高度最小的元素和位置
+function getMinIndex(arr){
+    var value=arr[0];//先获取第一个元素
+    var index=0;
+    for(var i=0;i<arr.length;i++){
+        //先和第一个元素比较，把最小值存储起来，再依次和后面的比较(冒泡排序)
+        if(arr[i]<value){
+            value=arr[i];
+                index=i;
+        }
+    }
+    return index;//获取最小高度的索引值
+}
+
+      //获取列数
+      function getCells(){
+      	cells=Math.floor(window.innerWidth/outerWidth);
+      	if(cells<3){
+      		cells=3;
+      	}else if(cells>6){
+      		cells=6;
+      	}
+      	$('#container').width(cells*outerWidth-space)
+      }
+	//监听浏览器窗口的变化，来改变图片显示的列数
+	$(window).on('resize',function(){
+		var oldCells=cells;//保存原来的列数
+		getCells();//重新对cells赋值
+		if(oldCells==cells){
+			return;
+		}else{
+			//先清空原来保存定位置的数组，再重新添加值
+			arrLeft=[];
+			arrTop=[];
+			for(var i=0;i<cells;i++){
+				arrTop.push(0);
+				arrLeft.push(i*outerWidth);
+			}
+//			对每个item元素重新赋予定位值
+			var $item=$('#container').find('.item');
+			$item.each(function(){
+				var minIndex=getMinIndex(arrTop);
+				$(this).animate({
+					left:arrLeft[minIndex],
+					top:arrTop[minIndex]
+				},'slow');
+				arrTop[minIndex]+=$(this).height()+space;
+			})
+		}
+		
+	})
+    function loadImg(){
+        $.getJSON(url,{pn:page},function(res){
+               var data=res.showapi_res_body.newslist;
+            
+               data.forEach(function(obj,index){
+                   var $div=$('<div/>');
+                   var minIndex=getMinIndex(arrTop);
+                   $div.addClass('item').animate({
+                       left:arrLeft[minIndex],
+                       top:arrTop[minIndex]
+                   },"slow").html("<img src="+obj.picUrl+" width="+width+">");
+                   $('#container').append($div);
+                   
+                   //arrTop加上top高度
+                   arrTop[minIndex]+=$div.height()+space;
+                   console.log($div.height());
+               		
+               	  //懒加载技术
+               	  $(window).on("scroll",function(){
+               	  	//获取滚动条的高度
+               	  	var t=$(window).scrollTop();
+               	  	//获取浏览器窗口的高度
+               	  	var h=$(window).innerHeight();
+               	  	//获取文档的高度
+               	  	var H=$(document).height();
+               	  	if(H<h+t+50){
+               	  		//再添加更多的图片
+               	  		page++;
+               	  		loadImg();
+               	  	}
+               	  })
+               })
+        })
+    }
+    loadImg();
+</script>
+</body>
+</html>
